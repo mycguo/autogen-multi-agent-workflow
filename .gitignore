@@ -1,0 +1,12 @@
+# Ignore backup directory
+backup/
+
+# Ignore the virtual environment
+venv/
+
+# Ignore .env files (often contain sensitive info)
+.env
+.DS_Store
+
+# Ignore Python cache directories
+__pycache__/
