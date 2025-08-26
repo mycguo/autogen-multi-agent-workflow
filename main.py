@@ -77,24 +77,49 @@ def generate_voiceovers(messages: list[str]) -> list[str]:
             
     # If all files exist, return them
     if len(audio_file_paths) == len(messages):
-        st.info("All voiceover files already exist. Skipping generation.")
+        msg = "All voiceover files already exist. Skipping generation."
+        try:
+            st.info(msg)
+        except:
+            pass
+        print(msg)
         return audio_file_paths
         
     # Generate missing files one by one
     audio_file_paths = []
-    progress_bar = st.progress(0)
-    status_text = st.empty()
+    
+    # Handle progress display (may not be available in all contexts)
+    progress_bar = None
+    status_text = None
+    try:
+        progress_bar = st.progress(0)
+        status_text = st.empty()
+    except:
+        pass
     
     for i, message in enumerate(messages, 1):
         try:
             save_file_path = f"voiceovers/voiceover_{i}.mp3"
             if os.path.exists(save_file_path):
-                st.session_state.workflow_messages.append(f"File {save_file_path} already exists, skipping generation.")
+                msg = f"File {save_file_path} already exists, skipping generation."
+                try:
+                    if 'workflow_messages' in st.session_state:
+                        st.session_state.workflow_messages.append(msg)
+                except:
+                    pass
+                print(msg)
                 audio_file_paths.append(save_file_path)
                 continue
 
-            status_text.text(f"Generating voiceover {i}/{len(messages)}...")
-            progress_bar.progress(i / len(messages))
+            try:
+                if status_text:
+                    status_text.text(f"Generating voiceover {i}/{len(messages)}...")
+                if progress_bar:
+                    progress_bar.progress(i / len(messages))
+            except:
+                pass
+            # Always print for debugging
+            print(f"Generating voiceover {i}/{len(messages)}...")
             
             # Generate audio with ElevenLabs
             response = elevenlabs_client.text_to_speech.convert(
@@ -115,16 +140,36 @@ def generate_voiceovers(messages: list[str]) -> list[str]:
                 for chunk in audio_chunks:
                     f.write(chunk)
                         
-            st.session_state.workflow_messages.append(f"Voiceover {i} generated successfully")
+            # Log progress (handle both Streamlit and non-Streamlit contexts)
+            msg = f"Voiceover {i} generated successfully"
+            try:
+                if 'workflow_messages' in st.session_state:
+                    st.session_state.workflow_messages.append(msg)
+            except:
+                pass
+            print(msg)
             audio_file_paths.append(save_file_path)
         
         except Exception as e:
             error_msg = f"Error generating voiceover for message: {message}. Error: {e}"
-            st.session_state.workflow_messages.append(error_msg)
+            try:
+                if 'workflow_messages' in st.session_state:
+                    st.session_state.workflow_messages.append(error_msg)
+            except:
+                pass
+            print(error_msg)
             continue
     
-    progress_bar.progress(1.0)
-    status_text.text("Voiceover generation complete!")
+    # Update final progress if available
+    try:
+        if progress_bar:
+            progress_bar.progress(1.0)
+        if status_text:
+            status_text.text("Voiceover generation complete!")
+    except:
+        pass
+    
+    print("Voiceover generation complete!")
     return audio_file_paths
 
 def generate_images(prompts: list[str]):
@@ -145,12 +190,26 @@ def generate_images(prompts: list[str]):
         "Accept": "image/*"
     }
 
-    progress_bar = st.progress(0)
-    status_text = st.empty()
+    # Handle progress display (may not be available in all contexts)
+    progress_bar = None
+    status_text = None
+    try:
+        progress_bar = st.progress(0)
+        status_text = st.empty()
+    except:
+        pass
     
     for i, prompt in enumerate(prompts, 1):
-        status_text.text(f"Generating image {i}/{len(prompts)} for prompt: {prompt}")
-        progress_bar.progress(i / len(prompts))
+        # Update progress display if available
+        try:
+            if status_text:
+                status_text.text(f"Generating image {i}/{len(prompts)} for prompt: {prompt}")
+            if progress_bar:
+                progress_bar.progress(i / len(prompts))
+        except:
+            pass
+        
+        print(f"Generating image {i}/{len(prompts)} for prompt: {prompt}")
 
         # Skip if image already exists
         image_path = os.path.join(output_dir, f"image_{i}.webp")
@@ -169,16 +228,40 @@ def generate_images(prompts: list[str]):
                 if response.status_code == 200:
                     with open(image_path, "wb") as image_file:
                         image_file.write(response.content)
-                    st.session_state.workflow_messages.append(f"Image saved to {image_path}")
+                    msg = f"Image saved to {image_path}"
+                    try:
+                        if 'workflow_messages' in st.session_state:
+                            st.session_state.workflow_messages.append(msg)
+                    except:
+                        pass
+                    print(msg)
                 else:
                     error_msg = f"Error generating image {i}: {response.json()}"
-                    st.session_state.workflow_messages.append(error_msg)
+                    try:
+                        if 'workflow_messages' in st.session_state:
+                            st.session_state.workflow_messages.append(error_msg)
+                    except:
+                        pass
+                    print(error_msg)
             except Exception as e:
                 error_msg = f"Error generating image {i}: {e}"
-                st.session_state.workflow_messages.append(error_msg)
+                try:
+                    if 'workflow_messages' in st.session_state:
+                        st.session_state.workflow_messages.append(error_msg)
+                except:
+                    pass
+                print(error_msg)
     
-    progress_bar.progress(1.0)
-    status_text.text("Image generation complete!")
+    # Update final progress if available
+    try:
+        if progress_bar:
+            progress_bar.progress(1.0)
+        if status_text:
+            status_text.text("Image generation complete!")
+    except:
+        pass
+    
+    print("Image generation complete!")
 
 async def run_workflow(user_input: str, use_ollama: bool = False):
     """Run the multi-agent workflow with the given user input."""
@@ -339,7 +422,7 @@ def main():
         submitted = st.form_submit_button(
             "🚀 Generate Video", 
             disabled=st.session_state.workflow_running,
-            use_container_width=True
+            width='stretch'
         )
     
     # Run workflow when form is submitted
@@ -348,16 +431,6 @@ def main():
         st.session_state.workflow_messages = []
         
         with st.spinner("Running multi-agent workflow..."):
-            # Create columns for progress
-            col1, col2 = st.columns([1, 1])
-            
-            with col1:
-                st.subheader("🔄 Workflow Progress")
-                progress_container = st.container()
-            
-            with col2:
-                st.subheader("💬 Agent Messages")
-                message_container = st.container()
             
             # Run the async workflow
             try:
@@ -405,7 +478,7 @@ def main():
             if os.path.exists("images"):
                 image_files = [f for f in os.listdir("images") if f.endswith((".webp", ".png", ".jpg"))]
                 for img_file in sorted(image_files):
-                    st.image(f"images/{img_file}", caption=img_file, use_container_width=True)
+                    st.image(f"images/{img_file}", caption=img_file, width='stretch')
         
         with col3:
             st.subheader("🎥 Final Video")
@@ -419,7 +492,7 @@ def main():
                         data=video_file.read(),
                         file_name="generated_video.mp4",
                         mime="video/mp4",
-                        use_container_width=True
+                        width='stretch'
                     )
             else:
                 st.info("Video file not found. Check the workflow log for errors.")

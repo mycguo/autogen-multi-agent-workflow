@@ -70,14 +70,28 @@ def generate_video(captions: list[str]):
         if f.lower().endswith(".mp3")
     ])
 
+    # Debug output
+    print(f"Found {len(images)} images: {images}")
+    print(f"Found {len(voiceovers)} voiceovers: {voiceovers}")
+    print(f"Received {len(captions)} captions: {captions}")
+    
     # Validate inputs
     if len(images) != len(voiceovers):
-        raise ValueError("Number of images and voiceovers must match!")
+        raise ValueError(f"Number of images ({len(images)}) and voiceovers ({len(voiceovers)}) must match!")
     
     if captions is None:
         captions = [os.path.splitext(os.path.basename(vo))[0] for vo in voiceovers]
     elif len(captions) != len(images):
-        raise ValueError("Number of captions must match number of images!")
+        # Try to match by truncating or padding captions
+        if len(captions) > len(images):
+            print(f"Warning: Truncating {len(captions)} captions to match {len(images)} images")
+            captions = captions[:len(images)]
+        else:
+            print(f"Warning: Padding {len(captions)} captions to match {len(images)} images")
+            while len(captions) < len(images):
+                captions.append(f"Caption {len(captions) + 1}")
+    
+    print(f"Final caption count: {len(captions)}")
 
     total_duration = len(images) * IMAGE_DURATION
     print(f"Total Duration: {total_duration} seconds")
