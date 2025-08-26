@@ -11,6 +11,7 @@ from dotenv import load_dotenv
 import asyncio
 import os
 import requests
+import streamlit as st
 
 from tools import generate_video
 
@@ -18,9 +19,9 @@ from tools import generate_video
 load_dotenv()
 
 # Initialize API clients
-openai_api_key = os.getenv("OPENAI_API_KEY")
-elevenlabs_api_key = os.getenv("ELEVENLABS_API_KEY")
-stability_api_key = os.getenv("STABILITY_API_KEY")
+openai_api_key = st.secrets["OPENAI_API_KEY"]
+elevenlabs_api_key = st.secrets["ELEVENLABS_API_KEY"]
+stability_api_key = st.secrets["STABILITY_API_KEY"]
 
 elevenlabs_client = ElevenLabs(api_key=elevenlabs_api_key)
 

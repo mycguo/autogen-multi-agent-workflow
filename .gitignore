@@ -1,8 +1,11 @@
 # Ignore backup directory
 backup/
+images/
+voiceovers/
 
 # Ignore the virtual environment
 venv/
+.venv/
 
 # Ignore .env files (often contain sensitive info)
 .env
