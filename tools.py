@@ -158,9 +158,15 @@ def generate_video(captions: list[str]):
         ]
         subprocess.run(concat_cmd, check=True)
 
-        # Step 3: Create audio mix (voiceovers + background music)
+        # Step 3: Create audio mix (voiceovers + optional background music)
         print("\nMixing audio...")
         final_audio_path = os.path.join(temp_dir, "final_audio.mp3")
+        
+        # Check if background music file exists
+        has_background_music = os.path.exists(music_file)
+        if not has_background_music:
+            print(f"Background music file not found: {music_file}")
+            print("Proceeding with voiceovers only...")
         
         # Build complex audio filter chain
         filter_parts = []
@@ -179,27 +185,36 @@ def generate_video(captions: list[str]):
             delayed_refs.append(f"[vo_delayed{i}]")
 
         # Mix all voiceovers together
-        filter_parts.append(
-            "".join(delayed_refs) +
-            f"amix=inputs={len(voiceovers)}:duration=longest:normalize=0[voicemix];"
-            "[voicemix]volume=2.5[voicemix_loud];"
-        )
-        
-        # Process background music
-        music_index = len(voiceovers)
-        filter_parts.append(
-            f"[{music_index}:a]"
-            "aformat=sample_fmts=fltp:sample_rates=44100:channel_layouts=stereo,"
-            "volume=0.8,"
-            f"afade=t=out:st={total_duration-1}:d=1[musicvol];"
-            f"[musicvol]atrim=0:{total_duration},asetpts=PTS-STARTPTS[music];"
-        )
-        
-        # Combine voiceovers with background music
-        filter_parts.append(
-            f"[voicemix_loud]apad=pad_dur={total_duration}[voicepadded];"
-            "[voicepadded][music]amix=inputs=2:duration=first:normalize=0[afinal]"
-        )
+        if has_background_music:
+            # With background music
+            filter_parts.append(
+                "".join(delayed_refs) +
+                f"amix=inputs={len(voiceovers)}:duration=longest:normalize=0[voicemix];"
+                "[voicemix]volume=2.5[voicemix_loud];"
+            )
+            
+            # Process background music
+            music_index = len(voiceovers)
+            filter_parts.append(
+                f"[{music_index}:a]"
+                "aformat=sample_fmts=fltp:sample_rates=44100:channel_layouts=stereo,"
+                "volume=0.8,"
+                f"afade=t=out:st={total_duration-1}:d=1[musicvol];"
+                f"[musicvol]atrim=0:{total_duration},asetpts=PTS-STARTPTS[music];"
+            )
+            
+            # Combine voiceovers with background music
+            filter_parts.append(
+                f"[voicemix_loud]apad=pad_dur={total_duration}[voicepadded];"
+                "[voicepadded][music]amix=inputs=2:duration=first:normalize=0[afinal]"
+            )
+        else:
+            # Without background music - just mix voiceovers and pad to full duration
+            filter_parts.append(
+                "".join(delayed_refs) +
+                f"amix=inputs={len(voiceovers)}:duration=longest:normalize=0[voicemix];"
+                f"[voicemix]volume=2.5,apad=pad_dur={total_duration}[afinal]"
+            )
         
         # Build and run FFmpeg command for audio mixing
         audio_filter_complex = "".join(filter_parts)
@@ -209,8 +224,9 @@ def generate_video(captions: list[str]):
         for voiceover in voiceovers:
             audio_cmd.extend(["-i", voiceover])
             
-        # Add input for background music
-        audio_cmd.extend(["-i", music_file])
+        # Add input for background music only if it exists
+        if has_background_music:
+            audio_cmd.extend(["-i", music_file])
         
         # Complete the command
         audio_cmd.extend([
