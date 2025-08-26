@@ -68,24 +68,14 @@ def generate_voiceovers(messages: list[str]) -> list[str]:
     """
     os.makedirs("voiceovers", exist_ok=True)
     
-    # Check for existing files first
-    audio_file_paths = []
-    for i in range(1, len(messages) + 1):
-        file_path = f"voiceovers/voiceover_{i}.mp3"
-        if os.path.exists(file_path):
-            audio_file_paths.append(file_path)
-            
-    # If all files exist, return them
-    if len(audio_file_paths) == len(messages):
-        msg = "All voiceover files already exist. Skipping generation."
-        try:
-            st.info(msg)
-        except:
-            pass
-        print(msg)
-        return audio_file_paths
-        
-    # Generate missing files one by one
+    # Find the next available file index to avoid overwriting
+    existing_files = [f for f in os.listdir("voiceovers") if f.startswith("voiceover_") and f.endswith(".mp3")]
+    next_index = len(existing_files) + 1
+    
+    print(f"Generating {len(messages)} voiceovers starting from index {next_index}")
+    print(f"Messages: {messages}")
+    
+    # Generate files starting from the next available index
     audio_file_paths = []
     
     # Handle progress display (may not be available in all contexts)
@@ -97,9 +87,12 @@ def generate_voiceovers(messages: list[str]) -> list[str]:
     except:
         pass
     
-    for i, message in enumerate(messages, 1):
+    for i, message in enumerate(messages):
         try:
-            save_file_path = f"voiceovers/voiceover_{i}.mp3"
+            # Use sequential numbering starting from next_index
+            file_index = next_index + i
+            save_file_path = f"voiceovers/voiceover_{file_index}.mp3"
+            
             if os.path.exists(save_file_path):
                 msg = f"File {save_file_path} already exists, skipping generation."
                 try:
@@ -113,35 +106,45 @@ def generate_voiceovers(messages: list[str]) -> list[str]:
 
             try:
                 if status_text:
-                    status_text.text(f"Generating voiceover {i}/{len(messages)}...")
+                    status_text.text(f"Generating voiceover {file_index} ({i+1}/{len(messages)})...")
                 if progress_bar:
-                    progress_bar.progress(i / len(messages))
+                    progress_bar.progress((i+1) / len(messages))
             except:
                 pass
             # Always print for debugging
-            print(f"Generating voiceover {i}/{len(messages)}...")
+            print(f"Generating voiceover {file_index} ({i+1}/{len(messages)}): {message}")
             
             # Generate audio with ElevenLabs
-            response = elevenlabs_client.text_to_speech.convert(
-                text=message,
-                voice_id=voice_id,
-                model_id="eleven_multilingual_v2",
-                output_format="mp3_22050_32",
-            )
-            
-            # Collect audio chunks
-            audio_chunks = []
-            for chunk in response:
-                if chunk:
-                    audio_chunks.append(chunk)
-            
-            # Save to file
-            with open(save_file_path, "wb") as f:
-                for chunk in audio_chunks:
-                    f.write(chunk)
+            print(f"Calling ElevenLabs API for: {message}")
+            try:
+                response = elevenlabs_client.text_to_speech.convert(
+                    text=message,
+                    voice_id=voice_id,
+                    model_id="eleven_multilingual_v2",
+                    output_format="mp3_22050_32",
+                )
+                print("ElevenLabs API call successful")
+                
+                # Collect audio chunks
+                audio_chunks = []
+                for chunk in response:
+                    if chunk:
+                        audio_chunks.append(chunk)
+                
+                print(f"Collected {len(audio_chunks)} audio chunks")
+                
+                # Save to file
+                with open(save_file_path, "wb") as f:
+                    for chunk in audio_chunks:
+                        f.write(chunk)
+                        
+                print(f"Saved audio to: {save_file_path}")
+                
+            except Exception as api_error:
+                raise Exception(f"ElevenLabs API error: {api_error}")
                         
             # Log progress (handle both Streamlit and non-Streamlit contexts)
-            msg = f"Voiceover {i} generated successfully"
+            msg = f"Voiceover {file_index} generated successfully: {save_file_path}"
             try:
                 if 'workflow_messages' in st.session_state:
                     st.session_state.workflow_messages.append(msg)
@@ -169,7 +172,7 @@ def generate_voiceovers(messages: list[str]) -> list[str]:
     except:
         pass
     
-    print("Voiceover generation complete!")
+    print(f"Voiceover generation complete! Generated {len(audio_file_paths)} files: {audio_file_paths}")
     return audio_file_paths
 
 def generate_images(prompts: list[str]):

@@ -2,7 +2,7 @@
 backup/
 images/
 voiceovers/
-yt_shorts_video.mp4
+
 
 # Ignore the virtual environment
 venv/
