@@ -1,28 +1,35 @@
-# 🚀 AutoGen Multi-Agent Workflow Tutorial  
+# 🚀 Multi-Agent Video Generation Framework  
 
-This repository contains a beginner-friendly **AutoGen 0.4** tutorial demonstrating how to create an AI-powered **multi-agent system** with **external API integrations** (text-to-speech, image generation) and Ollama integration.
+This repository demonstrates two different approaches to creating AI-powered **multi-agent systems** for automated video generation with **external API integrations** (text-to-speech, image generation). Compare **AutoGen 0.4** and **CrewAI** frameworks side-by-side!
 
 🎥 **[Watch the YouTube video here](https://youtu.be/0PFexhfA4Pk)**  
 📖 **[Read the blog post here](https://www.gettingstarted.ai/autogen-multi-agent-workflow-tutorial)**  
 
 ## 🛠️ Features  
-- 🤖 **Multi-Agent System:** Script Writer, Voice Actor, Graphic Designer, and Director agents working together.  
-- 🎙️ **Text-to-Speech:** Converts AI-generated text into voiceovers using **ElevenLabs API**.  
-- 🖼️ **Image Generation:** Creates AI-generated visuals using **Stability AI**.  
-- 🏡 **Local LLM Support:** Optional integration with **Ollama** for running AI models offline.  
-- 🎮 **Interactive Console:** Type prompts and watch agents generate content dynamically.  
+- 🤖 **Dual Framework Implementation:** Compare AutoGen vs CrewAI approaches  
+- 👥 **Multi-Agent Collaboration:** Script Writer, Voice Actor, Graphic Designer, and Director agents  
+- 🎙️ **Text-to-Speech:** Converts AI-generated text into voiceovers using **ElevenLabs API**  
+- 🖼️ **Image Generation:** Creates AI-generated visuals using **Stability AI**  
+- 🎬 **Video Assembly:** Automated video creation with Ken Burns effects and audio mixing  
+- 🏡 **Local LLM Support:** Optional integration with **Ollama** for running AI models offline  
+- 🌐 **Streamlit Web Interface:** Interactive web apps for both frameworks  
+- 📱 **YouTube Shorts Format:** Optimized 9:16 aspect ratio vertical videos  
 
 ---
 
 ## 📂 Folder Structure  
 ```plaintext
 autogen-multi-agent-workflow/
-│── tools.py               # Utility functions (text-to-speech, image generation)
-│── main.py                # Entry point for running the workflow
-│── .env                   # API keys (not included, create your own)
-│── .gitignore             # 
-│── requirements.txt       # Dependencies for the project
-│── README.md              # Documentation
+├── main.py                 # AutoGen implementation with Streamlit UI
+├── crewai_app.py          # CrewAI implementation with Streamlit UI  
+├── tools.py               # Video generation utilities (FFmpeg, Ken Burns effects)
+├── requirements.txt       # Dependencies for both frameworks
+├── CLAUDE.md              # Development documentation
+├── .env                   # API keys (create your own)
+├── .gitignore            # Git ignore rules
+├── voiceovers/           # Generated audio files (auto-created)
+├── images/               # Generated image files (auto-created)
+└── README.md             # This documentation
 ```
 
 ---
@@ -68,19 +75,46 @@ Before running the workflow, you'll need to create accounts for the following se
 
 These accounts provide API access for text-to-speech and image generation, which are required for the agents to function.
 
-### 6️⃣ Run the Workflow  
+### 6️⃣ Run the Applications  
+
+#### **AutoGen Streamlit App:**
+```bash
+streamlit run main.py
+```
+
+#### **CrewAI Streamlit App:**  
+```bash  
+streamlit run crewai_app.py
+```
+
+#### **AutoGen Console Mode:**
 ```bash
 python main.py
 ```
-You’ll be prompted to enter a task, and the agents will collaborate to generate a script, voiceover, and images dynamically.
+
+Open your browser and navigate to the provided local URL (typically http://localhost:8501) to access the web interface.
 
 ---
 
 ## 🛠️ How It Works  
-1️⃣ **Script Writer Agent** generates structured captions.  
-2️⃣ **Voice Actor Agent** converts text to speech.  
-3️⃣ **Graphic Designer Agent** creates images based on captions.  
-4️⃣ **Director Agent** orchestrates the final output.  
+
+### 🔄 **AutoGen Workflow (Round-Robin Execution)**
+1️⃣ **Script Writer Agent** generates structured JSON with 5 captions  
+2️⃣ **Voice Actor Agent** converts captions to MP3 voiceovers via ElevenLabs  
+3️⃣ **Graphic Designer Agent** creates abstract art images via Stability AI  
+4️⃣ **Director Agent** assembles final MP4 video with FFmpeg  
+
+### ⚙️ **CrewAI Workflow (Sequential Task Execution)**  
+1️⃣ **Script Writer Agent** creates compelling video narrative structure  
+2️⃣ **Voice Actor Agent** coordinates voiceover production process  
+3️⃣ **Graphic Designer Agent** designs visual specifications and prompts  
+4️⃣ **Video Director Agent** oversees final assembly coordination  
+
+### 🎬 **Video Generation Pipeline**
+- **Ken Burns Effect**: Slow zoom/pan on images for cinematic feel
+- **Text Overlays**: Captions with custom styling and positioning  
+- **Audio Mixing**: Voiceovers timed to image segments (background music optional)
+- **Output Format**: 1080x1920 (9:16) MP4 optimized for social media  
 
 ---
 
@@ -112,15 +146,74 @@ Create a short AI-generated video about space exploration.
 
 ---
 
+## 🔧 Framework Comparison
+
+| Feature | AutoGen | CrewAI |
+|---------|---------|---------|
+| **Execution Pattern** | Round-robin turns | Sequential tasks |
+| **Agent Communication** | Function calls + termination | Context sharing |
+| **Configuration** | System messages | Roles + backstories |
+| **Process Control** | Max turns + conditions | Task dependencies |
+| **Tool Integration** | Direct function calling | Coordination-based |
+| **Workflow Flexibility** | High (dynamic turns) | Structured (predefined) |
+| **Learning Curve** | Moderate | Easy |
+
 ## 🔧 Customization  
-- **Use a different LLM:** Swap OpenAI for **Ollama** to run locally. (See blog for more)
-- **Modify agent behaviors:** Edit the `system_message` for each agent.  
-- **Integrate new APIs:** Extend `tools.py` for additional functionality.  
+- **Use a different LLM:** Swap OpenAI for **Ollama** to run locally
+- **Modify agent behaviors:** Edit system messages (AutoGen) or backstories (CrewAI)  
+- **Extend functionality:** Add new tools in `tools.py` or create custom agent functions
+- **Adjust video settings:** Modify duration, resolution, effects in video generation pipeline
+- **Background Music:** Add `music/cosmos.mp3` file for background audio (optional)  
 
 ---
 
+## 🛠️ Technical Requirements
+
+### **System Dependencies**
+- **Python 3.8+** (Python 3.13 recommended)
+- **FFmpeg** for video processing and audio mixing
+- **Virtual environment** support
+
+### **API Requirements**  
+- **OpenAI API Key** for LLM agents (GPT-4 recommended)
+- **ElevenLabs API Key** for text-to-speech conversion
+- **Stability AI API Key** for image generation
+
+### **Hardware Recommendations**
+- **4GB+ RAM** for video processing
+- **2GB+ storage** for generated content
+- **Internet connection** for API services
+
+## 🧪 Testing & Development
+
+### **Run Tests**
+```bash
+# Test AutoGen implementation
+python -c "from main import generate_voiceovers, generate_images; print('✅ AutoGen imports working')"
+
+# Test CrewAI implementation  
+python -c "from crewai import Agent, Task, Crew; print('✅ CrewAI imports working')"
+
+# Test video generation
+python -c "from tools import generate_video; print('✅ Video tools working')"
+```
+
+### **Debug Mode**
+Set environment variable for verbose logging:
+```bash
+export AUTOGEN_DEBUG=1
+streamlit run main.py
+```
+
 ## 🤝 Contributing  
-Pull requests are welcome! If you find issues or want to improve the workflow, feel free to open an issue.  
+Pull requests are welcome! If you find issues or want to improve the workflow, feel free to open an issue.
+
+**Areas for contribution:**
+- Additional multi-agent frameworks (LangGraph, etc.)
+- Enhanced video effects and transitions  
+- Performance optimizations
+- Additional API integrations
+- Mobile-responsive UI improvements  
 
 ---
 
@@ -134,4 +227,20 @@ For full details, see the [LICENSE](LICENSE) file.
 ---
 
 ## 🌟 Support & Feedback  
-If you find this project helpful, **⭐️ star the repo** and share your thoughts!  
+If you find this project helpful, **⭐️ star the repo** and share your thoughts!
+
+### **Useful Resources**
+- **AutoGen Documentation**: [https://microsoft.github.io/autogen/](https://microsoft.github.io/autogen/)
+- **CrewAI Documentation**: [https://docs.crewai.com/](https://docs.crewai.com/)
+- **ElevenLabs API Docs**: [https://elevenlabs.io/docs](https://elevenlabs.io/docs)
+- **Stability AI API Docs**: [https://platform.stability.ai/docs](https://platform.stability.ai/docs)
+- **FFmpeg Documentation**: [https://ffmpeg.org/documentation.html](https://ffmpeg.org/documentation.html)
+
+### **Community**
+- **Issues**: Report bugs or request features
+- **Discussions**: Share your generated videos and improvements
+- **Pull Requests**: Contribute code improvements
+
+---
+
+**🎬 Happy video generating with AI agents! 🤖✨**  
