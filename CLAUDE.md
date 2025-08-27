@@ -4,11 +4,21 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-This is an AutoGen 0.4 multi-agent system that creates AI-powered short videos. The system orchestrates four specialized agents:
+This repository contains two multi-agent implementations for creating AI-powered short videos:
+
+### AutoGen Implementation (`main.py`)
+AutoGen 0.4 multi-agent system with four specialized agents:
 - **Script Writer**: Generates structured JSON with topic, takeaway, and 5 captions (max 8 words each)
 - **Voice Actor**: Converts captions to voiceovers using ElevenLabs API
 - **Graphic Designer**: Creates images from captions using Stability AI API
 - **Director**: Assembles final video with Ken Burns effects, text overlays, and background music
+
+### CrewAI Implementation (`crewai_app.py`)
+CrewAI framework with role-based agent collaboration:
+- **Script Writer Agent**: Creative writer with compelling caption generation
+- **Voice Actor Agent**: Professional voice actor using TTS technology
+- **Graphic Designer Agent**: Digital artist specializing in abstract art
+- **Video Director Agent**: Experienced director for final assembly
 
 ## Core Architecture
 
@@ -43,8 +53,15 @@ venv\Scripts\activate  # Windows
 pip install -r requirements.txt
 ```
 
-### Running the Application
+### Running the Applications
 ```bash
+# AutoGen Streamlit App
+streamlit run main.py
+
+# CrewAI Streamlit App  
+streamlit run crewai_app.py
+
+# Direct Python execution (console mode)
 python main.py
 ```
 
@@ -89,10 +106,32 @@ The video generation requires FFmpeg with:
 - Input validation ensures matching counts between captions, images, and voiceovers
 - Temporary directory cleanup in finally blocks
 
+## Framework Comparison
+
+### AutoGen Features
+- **Round-robin execution** with max turn limits
+- **Function calling** integration with tools
+- **Termination conditions** for workflow control
+- **Streaming responses** with real-time updates
+- **Flexible configuration** for different LLM providers
+
+### CrewAI Features  
+- **Role-based agents** with specialized backstories and goals
+- **Sequential task execution** with dependency management
+- **Context sharing** between tasks automatically
+- **Built-in collaboration** patterns and delegation
+- **Structured workflow** definition with expected outputs
+
 ## Agent System Messages
 
-Key behavioral constraints embedded in system messages:
+### AutoGen Agent Constraints
 - **Script Writer**: Exactly 5 captions, max 8 words each, JSON output format
 - **Voice Actor**: Only terminates after successful file saves
 - **Graphic Designer**: Maintains "Abstract Art Style" consistency across images
 - **Director**: Sanitizes caption text for FFmpeg compatibility
+
+### CrewAI Agent Roles
+- **Script Writer**: Creative writer with compelling storytelling background
+- **Voice Actor**: Professional narrator with TTS expertise
+- **Graphic Designer**: Digital artist specializing in abstract conceptual imagery
+- **Video Director**: Experienced director focused on short-form content assembly
