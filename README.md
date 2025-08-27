@@ -87,6 +87,11 @@ streamlit run main.py
 streamlit run crewai_app.py
 ```
 
+#### **CrewAI Streamlit App (Cloud Compatible):**  
+```bash  
+streamlit run crewai_lite.py
+```
+
 #### **AutoGen Console Mode:**
 ```bash
 python main.py
@@ -240,6 +245,33 @@ If you find this project helpful, **⭐️ star the repo** and share your though
 - **Issues**: Report bugs or request features
 - **Discussions**: Share your generated videos and improvements
 - **Pull Requests**: Contribute code improvements
+
+---
+
+## ☁️ **Streamlit Cloud Deployment**
+
+### **Option 1: Use ChromaDB-Free Version (Recommended)**
+Deploy `crewai_lite.py` instead of `crewai_app.py` to avoid SQLite version conflicts:
+
+1. **Set main file**: `crewai_lite.py` 
+2. **Requirements file**: `requirements-cloud.txt`
+3. **Add packages.txt**: Include system packages for FFmpeg
+4. **Set secrets**: Add API keys in Streamlit Cloud secrets management
+
+### **Option 2: Fix SQLite Version**
+If you prefer the full CrewAI version:
+
+1. **Add packages.txt** with SQLite upgrade packages
+2. **Pin CrewAI version** to avoid dependency conflicts  
+3. **Use requirements-cloud.txt** with compatible versions
+
+### **Deployment Files for Streamlit Cloud:**
+```
+├── crewai_lite.py           # Main app (ChromaDB-free)
+├── requirements-cloud.txt   # Cloud-optimized dependencies  
+├── packages.txt            # System packages (FFmpeg, SQLite)
+└── .streamlit/secrets.toml # API keys (not in repo)
+```
 
 ---
 

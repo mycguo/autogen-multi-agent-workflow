@@ -1,0 +1,21 @@
+# Streamlit Cloud optimized requirements
+# Avoids ChromaDB dependency issues
+
+# Core dependencies
+autogen-agentchat
+autogen-ext[openai]
+elevenlabs
+python-dotenv
+requests
+streamlit
+
+# LangChain for CrewAI-style agents (without CrewAI's ChromaDB dependency)
+langchain-openai
+langchain-core
+langchain-community
+
+# Optional: If you want to try CrewAI anyway, use specific version
+# crewai==0.11.2
+
+# Pydantic compatibility
+pydantic>=2.0.0

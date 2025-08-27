@@ -1,0 +1,3 @@
+ffmpeg
+libsqlite3-dev
+sqlite3
