@@ -5,11 +5,11 @@ from datetime import datetime
 from typing import List, Dict, Any
 from dotenv import load_dotenv
 
-# CrewAI imports
-from crewai import Agent, Task, Crew, Process
+# Use OpenAI directly instead of CrewAI for Streamlit Cloud compatibility
 from langchain_openai import ChatOpenAI
+from langchain.schema import HumanMessage, SystemMessage
 
-# Import utility functions from main.py
+# Import utility functions
 from main import generate_voiceovers, generate_images
 from tools import generate_video
 
@@ -18,31 +18,25 @@ load_dotenv()
 
 # Streamlit page configuration
 st.set_page_config(
-    page_title="CrewAI Video Generator",
+    page_title="CrewAI-Style Video Generator",
     page_icon="🎬",
     layout="wide"
 )
 
 # Initialize session state
-if 'crew_workflow_running' not in st.session_state:
-    st.session_state.crew_workflow_running = False
-if 'crew_generated_content' not in st.session_state:
-    st.session_state.crew_generated_content = None
-if 'crew_workflow_messages' not in st.session_state:
-    st.session_state.crew_workflow_messages = []
+if 'crew_lite_workflow_running' not in st.session_state:
+    st.session_state.crew_lite_workflow_running = False
+if 'crew_lite_generated_content' not in st.session_state:
+    st.session_state.crew_lite_generated_content = None
 
 # Initialize API clients
 try:
     if 'OPENAI_API_KEY' in st.secrets:
         openai_api_key = st.secrets["OPENAI_API_KEY"]
-        elevenlabs_api_key = st.secrets["ELEVENLABS_API_KEY"]
-        stability_api_key = st.secrets["STABILITY_API_KEY"]
     else:
         openai_api_key = os.getenv("OPENAI_API_KEY")
-        elevenlabs_api_key = os.getenv("ELEVENLABS_API_KEY")
-        stability_api_key = os.getenv("STABILITY_API_KEY")
         
-    # Initialize language model for CrewAI
+    # Initialize language model
     llm = ChatOpenAI(
         model="gpt-4o",
         api_key=openai_api_key,
@@ -53,89 +47,82 @@ except Exception as e:
     st.error(f"Error initializing API clients: {e}")
     st.stop()
 
-# Helper functions that agents will use
-def execute_voiceover_generation(captions: List[str]) -> str:
-    """Execute voiceover generation for captions"""
-    try:
-        result = generate_voiceovers(captions)
-        return f"Generated voiceovers: {result}"
-    except Exception as e:
-        return f"Error generating voiceovers: {e}"
+# Agent personas using direct LLM calls instead of CrewAI
+class CrewAIStyleAgent:
+    def __init__(self, role: str, goal: str, backstory: str, llm):
+        self.role = role
+        self.goal = goal
+        self.backstory = backstory
+        self.llm = llm
+    
+    def execute_task(self, task_description: str, context: str = "") -> str:
+        """Execute a task using the agent's persona"""
+        system_prompt = f"""
+        You are a {self.role}.
+        
+        Your goal: {self.goal}
+        
+        Your backstory: {self.backstory}
+        
+        Context from previous tasks: {context}
+        
+        Execute the following task according to your role and expertise.
+        """
+        
+        messages = [
+            SystemMessage(content=system_prompt),
+            HumanMessage(content=task_description)
+        ]
+        
+        response = self.llm.invoke(messages)
+        return response.content
 
-def execute_image_generation(prompts: List[str]) -> str:
-    """Execute image generation for prompts"""
+def run_crewai_style_workflow(topic: str) -> Dict[str, Any]:
+    """Run a CrewAI-style workflow without ChromaDB dependencies"""
+    
     try:
-        generate_images(prompts)
-        return f"Generated {len(prompts)} images successfully"
-    except Exception as e:
-        return f"Error generating images: {e}"
-
-def execute_video_assembly(captions: List[str]) -> str:
-    """Execute final video assembly"""
-    try:
-        generate_video(captions)
-        return "Video generated successfully: yt_shorts_video.mp4"
-    except Exception as e:
-        return f"Error generating video: {e}"
-
-def create_crew(topic: str) -> Crew:
-    """Create and configure the CrewAI crew for video generation"""
-    
-    # Define Agents
-    script_writer = Agent(
-        role="Script Writer",
-        goal="Create engaging video scripts with exactly 5 short captions",
-        backstory="""You are a creative script writer specialized in creating compelling 
-        short-form video content. You excel at crafting punchy, attention-grabbing captions 
-        that tell a story in just a few words.""",
-        llm=llm,
-        verbose=True,
-        allow_delegation=False
-    )
-    
-    voice_actor = Agent(
-        role="Voice Actor",
-        goal="Convert script captions into high-quality voiceovers",
-        backstory="""You are a professional voice actor who specializes in creating 
-        engaging narration for educational and exploratory content. You coordinate 
-        with the technical team to convert script captions into voiceover files.""",
-        llm=llm,
-        verbose=True,
-        allow_delegation=False
-    )
-    
-    graphic_designer = Agent(
-        role="Graphic Designer", 
-        goal="Create visually stunning images that complement the script",
-        backstory="""You are a digital artist specializing in abstract art and 
-        conceptual imagery. You work with technical systems to generate visually 
-        cohesive series of images that tell a story and maintain consistent artistic style.""",
-        llm=llm,
-        verbose=True,
-        allow_delegation=False
-    )
-    
-    video_director = Agent(
-        role="Video Director",
-        goal="Assemble all elements into a final polished video",
-        backstory="""You are an experienced video director who specializes in 
-        short-form content. You coordinate the final assembly of visual elements, 
-        audio, and timing to create engaging final products.""",
-        llm=llm,
-        verbose=True,
-        allow_delegation=False
-    )
-    
-    # Define Tasks
-    script_task = Task(
-        description=f"""Create a script for a short video about: {topic}
+        print(f"Starting CrewAI-style workflow for topic: {topic}")
+        
+        # Create agents
+        script_writer = CrewAIStyleAgent(
+            role="Script Writer",
+            goal="Create engaging video scripts with exactly 5 short captions",
+            backstory="You are a creative script writer specialized in creating compelling short-form video content.",
+            llm=llm
+        )
+        
+        voice_actor = CrewAIStyleAgent(
+            role="Voice Actor", 
+            goal="Coordinate voiceover production",
+            backstory="You are a professional voice actor who coordinates text-to-speech production.",
+            llm=llm
+        )
+        
+        graphic_designer = CrewAIStyleAgent(
+            role="Graphic Designer",
+            goal="Design visual specifications for abstract art",
+            backstory="You are a digital artist specializing in abstract art and conceptual imagery.",
+            llm=llm
+        )
+        
+        video_director = CrewAIStyleAgent(
+            role="Video Director",
+            goal="Coordinate final video assembly",
+            backstory="You are an experienced video director who coordinates short-form content assembly.",
+            llm=llm
+        )
+        
+        # Task 1: Script Writing
+        st.info("🖋️ Script Writer is creating the video script...")
+        script_task = f"""Create a script for a short video about: {topic}
 
         Requirements:
         1. Generate exactly 5 captions, each no more than 8 words
         2. Start with a compelling question or statement
         3. Create a natural narrative flow
         4. Include topic and takeaway
-        5. Output in JSON format:
+        
+        Output in JSON format:
         {{
             "topic": "topic name",
             "takeaway": "main message", 
@@ -146,123 +133,105 @@ def create_crew(topic: str) -> Crew:
                 "caption4",
                 "caption5"
             ]
-        }}""",
-        agent=script_writer,
-        expected_output="JSON object with topic, takeaway, and 5 captions"
-    )
-    
-    voiceover_task = Task(
-        description="""Coordinate the generation of voiceovers for each caption from the script.
+        }}"""
         
-        Your task is to organize the voiceover production process:
-        1. Take the captions from the script
-        2. Prepare them for voiceover generation
-        3. Confirm that voiceovers should be generated for all captions
-        4. Return "VOICEOVERS_READY" when preparation is complete""",
-        agent=voice_actor,
-        expected_output="Confirmation message: VOICEOVERS_READY",
-        context=[script_task]
-    )
-    
-    image_task = Task(
-        description="""Design and coordinate the creation of abstract art images for each caption.
+        script_result = script_writer.execute_task(script_task)
         
-        Your responsibilities:
-        1. Convert each caption into optimized image generation prompts
-        2. Ensure prompts maintain consistent "Abstract Art Style / Ultra High Quality"
-        3. Create prompts that ensure visual continuity between images
-        4. Format prompts as: "Abstract Art Style / Ultra High Quality. [caption interpretation]"
-        5. Return "IMAGES_READY" when design specifications are complete""",
-        agent=graphic_designer,
-        expected_output="Confirmation message: IMAGES_READY with prompt specifications",
-        context=[script_task]
-    )
-    
-    video_task = Task(
-        description="""Direct the final video assembly process.
+        # Parse the JSON response
+        try:
+            # Extract JSON from the response
+            import re
+            json_match = re.search(r'\{.*\}', script_result, re.DOTALL)
+            if json_match:
+                script_data = json.loads(json_match.group())
+            else:
+                # Fallback if JSON parsing fails
+                script_data = {
+                    "topic": topic,
+                    "takeaway": f"Insights about {topic}",
+                    "captions": [
+                        "What lies beyond our understanding?",
+                        "Exploring new frontiers of knowledge", 
+                        "Discovering hidden patterns and connections",
+                        "Innovation shapes our future path",
+                        "The journey continues endlessly"
+                    ]
+                }
+        except:
+            # Fallback data
+            script_data = {
+                "topic": topic,
+                "takeaway": f"Key insights about {topic}",
+                "captions": [
+                    "What mysteries await discovery?",
+                    "Pushing boundaries of possibility",
+                    "Uncovering secrets of the universe", 
+                    "Technology shapes our destiny",
+                    "The future is limitless"
+                ]
+            }
         
-        Your directing responsibilities:
-        1. Ensure all elements are ready (script, voiceovers, images)
-        2. Prepare captions for video assembly (clean alphanumeric text)
-        3. Coordinate the final video production process
-        4. Return "VIDEO_ASSEMBLY_COMPLETE" when directing is finished""",
-        agent=video_director,
-        expected_output="Final direction confirmation: VIDEO_ASSEMBLY_COMPLETE",
-        context=[script_task, voiceover_task, image_task]
-    )
-    
-    # Create and configure crew
-    crew = Crew(
-        agents=[script_writer, voice_actor, graphic_designer, video_director],
-        tasks=[script_task, voiceover_task, image_task, video_task],
-        process=Process.sequential,
-        verbose=2
-    )
-    
-    return crew
-
-def run_crewai_workflow(topic: str) -> Dict[str, Any]:
-    """Run the CrewAI workflow for video generation"""
-    
-    try:
-        print(f"Starting CrewAI workflow for topic: {topic}")
+        st.success(f"✅ Generated script: {script_data['topic']}")
         
-        # Create crew
-        crew = create_crew(topic)
+        # Task 2: Voice Acting Coordination
+        st.info("🎙️ Voice Actor is coordinating voiceover production...")
+        voice_task = f"""Coordinate voiceover production for these captions: {script_data['captions']}
         
-        # Execute CrewAI workflow (coordination phase)
-        result = crew.kickoff()
+        Confirm that voiceovers should be generated for all captions and return 'VOICEOVERS_READY'"""
         
-        print(f"CrewAI coordination completed. Result: {result}")
+        voice_result = voice_actor.execute_task(voice_task, str(script_data))
+        st.success("✅ Voice Actor ready for production")
         
-        # Extract script data from the result (assuming first task contains JSON)
-        # This is a simplified approach - in practice you'd parse the actual agent outputs
-        script_data = {
-            "topic": topic,
-            "takeaway": f"Key insights about {topic}",
-            "captions": [
-                "What lies beyond our understanding?",
-                "Exploring new frontiers of knowledge",
-                "Discovering hidden patterns and connections", 
-                "Innovation shapes our future path",
-                "The journey continues with endless possibilities"
-            ]
-        }
+        # Task 3: Graphic Design
+        st.info("🎨 Graphic Designer is creating image specifications...")
+        design_task = f"""Design image specifications for these captions: {script_data['captions']}
         
-        print("Executing actual generation tasks...")
+        Create optimized prompts maintaining 'Abstract Art Style / Ultra High Quality' and return 'IMAGES_READY'"""
         
-        # Execute voiceover generation
-        print("Generating voiceovers...")
-        voiceover_result = execute_voiceover_generation(script_data["captions"])
-        print(f"Voiceover result: {voiceover_result}")
+        design_result = graphic_designer.execute_task(design_task, str(script_data))
+        st.success("✅ Graphic Designer completed specifications")
         
-        # Execute image generation
-        print("Generating images...")
+        # Task 4: Video Direction
+        st.info("🎬 Video Director is coordinating final assembly...")
+        director_task = f"""Direct the final video assembly for: {script_data['captions']}
+        
+        Coordinate all elements and return 'VIDEO_ASSEMBLY_COMPLETE'"""
+        
+        director_result = video_director.execute_task(director_task, 
+                                                    f"Script: {script_data}, Voice: {voice_result}, Design: {design_result}")
+        st.success("✅ Video Director completed coordination")
+        
+        # Execute actual generation
+        st.info("🔧 Executing actual content generation...")
+        
+        # Generate voiceovers
+        voiceover_result = generate_voiceovers(script_data["captions"])
+        
+        # Generate images
         image_prompts = [
             f"Abstract Art Style / Ultra High Quality. {caption}"
             for caption in script_data["captions"]
         ]
-        image_result = execute_image_generation(image_prompts)
-        print(f"Image result: {image_result}")
+        generate_images(image_prompts)
         
-        # Execute video assembly
-        print("Assembling final video...")
-        video_result = execute_video_assembly(script_data["captions"])
-        print(f"Video result: {video_result}")
+        # Generate video
+        generate_video(script_data["captions"])
         
         return {
             'success': True,
-            'result': result,
             'script_data': script_data,
-            'voiceover_result': voiceover_result,
-            'image_result': image_result,
-            'video_result': video_result,
+            'agent_results': {
+                'script': script_result,
+                'voice': voice_result,
+                'design': design_result,
+                'director': director_result
+            },
             'topic': topic,
             'timestamp': datetime.now()
         }
         
     except Exception as e:
-        print(f"Error in CrewAI workflow: {e}")
+        print(f"Error in CrewAI-style workflow: {e}")
         return {
             'success': False,
             'error': str(e),
@@ -271,91 +240,90 @@ def run_crewai_workflow(topic: str) -> Dict[str, Any]:
         }
 
 def main():
-    """Main CrewAI Streamlit application"""
+    """Main CrewAI-Style Streamlit application"""
     
     # Title and description
-    st.title("🎬 CrewAI Video Generator")
+    st.title("🎬 CrewAI-Style Video Generator")
     st.markdown("""
-    Create AI-powered short videos using **CrewAI** multi-agent framework! 
-    Our specialized crew of AI agents collaborate to generate scripts, voiceovers, images, and final videos.
+    Create AI-powered short videos using **CrewAI-inspired** multi-agent collaboration! 
+    This version is optimized for Streamlit Cloud deployment without ChromaDB dependencies.
     """)
     
+    # Info about compatibility
+    st.info("📋 **Streamlit Cloud Optimized**: This version avoids ChromaDB dependencies for better cloud compatibility.")
+    
     # Sidebar configuration
-    st.sidebar.title("⚙️ CrewAI Configuration")
-    st.sidebar.info("CrewAI uses sequential agent collaboration with role-based specialization")
+    st.sidebar.title("⚙️ Configuration")
+    st.sidebar.info("CrewAI-style agents using direct LLM coordination")
     
     # Agent status display
     with st.sidebar.expander("👥 Agent Crew", expanded=True):
         st.write("**🖋️ Script Writer** - Creates engaging captions")
-        st.write("**🎙️ Voice Actor** - Generates voiceovers") 
-        st.write("**🎨 Graphic Designer** - Creates abstract art")
+        st.write("**🎙️ Voice Actor** - Coordinates voiceovers") 
+        st.write("**🎨 Graphic Designer** - Designs visual specs")
         st.write("**🎬 Video Director** - Assembles final video")
     
-    # Clear generated content button
-    if st.sidebar.button("🗑️ Clear All Generated Content"):
-        st.session_state.crew_generated_content = None
-        st.session_state.crew_workflow_messages = []
-        # Clean up generated files
+    # Clear content button
+    if st.sidebar.button("🗑️ Clear Generated Content"):
+        st.session_state.crew_lite_generated_content = None
+        # Clean up files
         for folder in ["voiceovers", "images"]:
             if os.path.exists(folder):
                 import shutil
                 shutil.rmtree(folder)
         if os.path.exists("yt_shorts_video.mp4"):
             os.remove("yt_shorts_video.mp4")
-        st.success("All generated content cleared!")
+        st.success("All content cleared!")
         st.rerun()
     
     # Main input form
-    with st.form("crewai_video_generation_form"):
+    with st.form("crewai_lite_form"):
         user_input = st.text_area(
-            "Enter your video topic or description:",
-            placeholder="Create a short AI-generated video about space exploration",
+            "Enter your video topic:",
+            placeholder="Create a short video about artificial intelligence and the future",
             height=100
         )
         
         submitted = st.form_submit_button(
-            "🚀 Generate Video with CrewAI", 
-            disabled=st.session_state.crew_workflow_running,
+            "🚀 Generate Video (CrewAI-Style)", 
+            disabled=st.session_state.crew_lite_workflow_running,
             width='stretch'
         )
     
-    # Run workflow when form is submitted
+    # Run workflow
     if submitted and user_input.strip():
-        st.session_state.crew_workflow_running = True
-        st.session_state.crew_workflow_messages = []
+        st.session_state.crew_lite_workflow_running = True
         
-        with st.spinner("Running CrewAI multi-agent workflow..."):
+        with st.spinner("Running CrewAI-style multi-agent workflow..."):
+            result = run_crewai_style_workflow(user_input)
+            st.session_state.crew_lite_generated_content = result
             
-            # Run the CrewAI workflow
-            try:
-                result = run_crewai_workflow(user_input)
-                st.session_state.crew_generated_content = result
+            if result['success']:
+                st.success("✅ CrewAI-style video generation complete!")
+            else:
+                st.error(f"❌ Error: {result['error']}")
                 
-                if result['success']:
-                    st.success("✅ CrewAI video generation complete!")
-                else:
-                    st.error(f"❌ Error during CrewAI workflow: {result['error']}")
-                    
-            except Exception as e:
-                st.error(f"❌ Error during CrewAI workflow: {e}")
-            finally:
-                st.session_state.crew_workflow_running = False
-        
+        st.session_state.crew_lite_workflow_running = False
         st.rerun()
     
     # Display results
-    if st.session_state.crew_generated_content:
-        st.subheader("🎬 CrewAI Generated Content")
+    if st.session_state.crew_lite_generated_content:
+        content = st.session_state.crew_lite_generated_content
         
-        # Show input and timestamp
-        content = st.session_state.crew_generated_content
+        st.subheader("🎬 Generated Content")
         st.info(f"**Topic:** {content['topic']}")
-        st.caption(f"Generated on: {content['timestamp'].strftime('%Y-%m-%d %H:%M:%S')}")
+        st.caption(f"Generated: {content['timestamp'].strftime('%Y-%m-%d %H:%M:%S')}")
         
         if content['success']:
-            st.success(f"**Result:** {content['result']}")
-        else:
-            st.error(f"**Error:** {content['error']}")
+            # Show script data
+            if 'script_data' in content:
+                with st.expander("📝 Generated Script", expanded=True):
+                    script = content['script_data']
+                    st.write(f"**Topic:** {script['topic']}")
+                    st.write(f"**Takeaway:** {script['takeaway']}")
+                    st.write("**Captions:**")
+                    for i, caption in enumerate(script['captions'], 1):
+                        st.write(f"{i}. {caption}")
         
         # Display generated files
         col1, col2, col3 = st.columns(3)
@@ -363,8 +331,8 @@ def main():
         with col1:
             st.subheader("🎵 Voiceovers")
             if os.path.exists("voiceovers"):
-                voiceover_files = [f for f in os.listdir("voiceovers") if f.endswith(".mp3")]
-                for audio_file in sorted(voiceover_files):
+                audio_files = [f for f in os.listdir("voiceovers") if f.endswith(".mp3")]
+                for audio_file in sorted(audio_files):
                     st.audio(f"voiceovers/{audio_file}")
         
         with col2:
@@ -379,43 +347,21 @@ def main():
             if os.path.exists("yt_shorts_video.mp4"):
                 st.video("yt_shorts_video.mp4")
                 
-                # Download button for video
+                # Download button
                 with open("yt_shorts_video.mp4", "rb") as video_file:
                     st.download_button(
                         label="📥 Download Video",
                         data=video_file.read(),
-                        file_name="crewai_generated_video.mp4",
+                        file_name="crewai_style_video.mp4",
                         mime="video/mp4",
                         width='stretch'
                     )
             else:
-                st.info("Video file not found. Check the workflow log for errors.")
-    
-    # Comparison with AutoGen
-    with st.expander("🔍 CrewAI vs AutoGen Comparison", expanded=False):
-        col1, col2 = st.columns(2)
-        
-        with col1:
-            st.subheader("CrewAI Approach")
-            st.write("✅ **Role-based agents** with specialized backstories")
-            st.write("✅ **Sequential process** with task dependencies")
-            st.write("✅ **Built-in collaboration** patterns")
-            st.write("✅ **Context sharing** between tasks")
-            st.write("✅ **Structured workflow** definition")
-        
-        with col2:
-            st.subheader("AutoGen Approach")
-            st.write("✅ **Round-robin execution** with turn limits")
-            st.write("✅ **Function calling** integration")
-            st.write("✅ **Termination conditions** control")
-            st.write("✅ **Streaming responses** support")
-            st.write("✅ **Flexible agent** configuration")
+                st.info("Video not found. Check logs for errors.")
     
     # Footer
     st.markdown("---")
-    st.markdown(
-        "Built with ❤️ using **CrewAI**, Streamlit, OpenAI, ElevenLabs, and Stability AI"
-    )
+    st.markdown("Built with ❤️ using CrewAI-style coordination, Streamlit, OpenAI, ElevenLabs, and Stability AI")
 
 if __name__ == "__main__":
     main()
